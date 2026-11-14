@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -24,7 +25,11 @@ internal fun WardrobeScreen(
 ) {
     var showResults by rememberSaveable { mutableStateOf(false) }
     var confirmClear by rememberSaveable { mutableStateOf(false) }
-    val editable = !vm.photoBusy && !vm.loadingPhoto && !vm.savingPhoto
+    var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editable = !vm.photoBusy && !vm.loadingPhoto && !vm.savingPhoto && !vm.deletingAccount
+    LaunchedEffect(showResults, vm.connected, vm.usingCloud) {
+        if (showResults && vm.connected && vm.usingCloud) vm.refreshCloudLibrary()
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val horizontal = ((maxWidth - 880.dp) / 2).coerceAtLeast(20.dp)
         LazyVerticalGrid(
@@ -34,12 +39,12 @@ internal fun WardrobeScreen(
                 top = padding.calculateTopPadding() + 16.dp, bottom = padding.calculateBottomPadding() + 24.dp)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                PageTitle("TỦ ĐỒ CÁ NHÂN", "Lưu cảm hứng. Thử lại.", "Trang phục và ba kết quả gần nhất được giữ trong phiên này. Lưu ảnh về thư viện để giữ lâu hơn.")
+                PageTitle("TỦ ĐỒ CÁ NHÂN", "Lưu cảm hứng. Thử lại.", if (vm.usingCloud) "Kết quả của bạn được giữ trên cloud trong 7 ngày. Trang phục chỉ được giữ trong phiên trên máy này." else "Trang phục và ba kết quả gần nhất được giữ trong phiên này. Đăng nhập để xem lịch sử cloud.")
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !showResults, onClick = { showResults = false }, label = { Text("Trang phục · ${vm.recent.size}") })
-                    FilterChip(selected = showResults, onClick = { showResults = true }, label = { Text("Kết quả · ${vm.history.size}") })
+                    FilterChip(selected = showResults, onClick = { showResults = true }, label = { Text("Kết quả · ${if (vm.usingCloud) vm.cloudJobs.size else vm.history.size}") })
                 }
             }
             if (!showResults) {
@@ -70,6 +75,53 @@ internal fun WardrobeScreen(
                         OutlinedButton(onClick = { navigate(Destination.LIVE) }, modifier = Modifier.weight(1f)) { Text("Mở gương") }
                     }
                 }
+            } else if (vm.usingCloud) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Lịch sử trên cloud", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = vm::refreshCloudLibrary, enabled = !vm.cloudLibraryBusy) { Text("Làm mới") }
+                    }
+                    if (vm.cloudLibraryBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+                if (vm.cloudJobs.isEmpty() && !vm.cloudLibraryBusy) item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyState(Glyph.PHOTO, "Diện mạo mới sắp xuất hiện", "Các lần thử của bạn sẽ xuất hiện ở đây sau khi gửi ảnh.",
+                        "Thử phong cách đầu tiên", { navigate(Destination.PHOTO) })
+                }
+                items(vm.cloudJobs, key = { it.id }) { job ->
+                    val cached = vm.history.firstOrNull { it.id == job.id }
+                    OutlinedCard(shape = RoundedCornerShape(22.dp)) {
+                        if (cached != null) Image(cached.bitmap.asImageBitmap(), "Kết quả mặc thử",
+                            Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(Color.White), contentScale = ContentScale.Fit)
+                        else Box(Modifier.fillMaxWidth().height(130.dp).background(Blush), contentAlignment = Alignment.Center) {
+                            StudioIcon(if (job.completed) Glyph.PHOTO else Glyph.REFRESH, modifier = Modifier.size(32.dp), tint = Wine)
+                        }
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(when (job.status) {
+                                "completed" -> "Đã hoàn tất"
+                                "queued", "uploading" -> "Đang chờ xử lý"
+                                "processing" -> "Đang tạo ảnh"
+                                "cancelled" -> "Đã hủy"
+                                "expired" -> "Đã hết hạn"
+                                else -> "Chưa tạo được ảnh"
+                            }, style = MaterialTheme.typography.titleSmall)
+                            if (job.provider.isNotBlank()) Text(job.provider, style = MaterialTheme.typography.labelMedium, color = Muted)
+                            if (job.completed) {
+                                val expiry = remember(job.expiresAt) {
+                                    java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+                                        .format(java.util.Date(job.expiresAt * 1000))
+                                }
+                                Text("Giữ đến $expiry", style = MaterialTheme.typography.bodySmall, color = Muted)
+                            } else if (!job.pending) Text(CloudFailureMessages.describe(job.errorCode, job.status),
+                                style = MaterialTheme.typography.bodySmall, color = Muted)
+                            if (job.completed || job.pending) Button(
+                                onClick = { navigate(Destination.PHOTO); vm.openCloudResult(job) },
+                                enabled = editable, modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (job.pending) "Theo dõi" else "Xem & lưu") }
+                            TextButton(onClick = { deleteId = job.id }, enabled = editable && !vm.cloudLibraryBusy,
+                                modifier = Modifier.fillMaxWidth()) { Text("Xóa khỏi cloud") }
+                        }
+                    }
+                }
             } else {
                 if (vm.history.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(Glyph.PHOTO, "Diện mạo mới sắp xuất hiện", "Kết quả mặc thử của bạn sẽ có mặt ở đây.", "Thử phong cách đầu tiên",
@@ -92,6 +144,16 @@ internal fun WardrobeScreen(
             }
         }
     }
+    if (deleteId != null) AlertDialog(
+        onDismissRequest = { deleteId = null },
+        title = { Text("Xóa lần thử này?") },
+        text = { Text("Ảnh đầu vào và kết quả trên cloud sẽ được xóa. Yêu cầu AI đã nhận vẫn tính vào hạn mức. Ảnh đã tải về máy vẫn được giữ.") },
+        confirmButton = { TextButton(onClick = {
+            vm.cloudJobs.firstOrNull { it.id == deleteId }?.let(vm::deleteCloudResult)
+            deleteId = null
+        }) { Text("Xóa khỏi cloud") } },
+        dismissButton = { TextButton(onClick = { deleteId = null }) { Text("Giữ lại") } }
+    )
     if (confirmClear) AlertDialog(
         onDismissRequest = { confirmClear = false },
         title = { Text("Xóa ảnh của phiên này?") },
