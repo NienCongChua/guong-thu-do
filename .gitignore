@@ -1,0 +1,46 @@
+*.iml
+.gradle
+.kotlin/
+.idea/
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+**/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Backend secrets and private usage ledger
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/node_modules/
+backend/*.sqlite*
+backend/coverage/
+
+# Cloud runtime state, secrets and Firebase local credentials
+backend/cloudflare/node_modules/
+backend/cloudflare/.wrangler/
+backend/cloudflare/.dev.vars
+backend/cloudflare/.dev.vars.*
+!backend/cloudflare/.dev.vars.example
+backend/cloudflare/.env*
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebaserc.local
+app/google-services.json
+
+# Local signing credentials and editor/runtime files
+*.jks
+*.keystore
+key.properties
+*.hprof
+

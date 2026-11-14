@@ -1,0 +1,19 @@
+{
+  "name": "guong-thu-do-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "test": "node --test test/*.test.mjs",
+    "check": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "invite": "node scripts/invite.mjs",
+    "revoke": "node scripts/invite.mjs --revoke"
+  },
+  "dependencies": { "jose": "^6.1.0" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

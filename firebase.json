@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Gương Thử Đồ",
+        "supportEmail": "jacob.edu.vn@gmail.com"
+      }
+    }
+  }
+}

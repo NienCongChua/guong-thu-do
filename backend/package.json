@@ -1,0 +1,18 @@
+{
+  "name": "guong-thu-do-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@decartai/sdk": "0.2.14",
+    "express": "5.1.0",
+    "multer": "2.5.0"
+  }
+}

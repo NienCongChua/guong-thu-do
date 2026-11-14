@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "guong-thu-do-beta-api",
+  "account_id": "92022477464785abc50b848543fa5bee",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "FIREBASE_PROJECT_ID": "guong-thu-do-2026-74b2-ac568",
+    "PUBLIC_API_ORIGIN": "https://guong-thu-do-beta-api.damp-star-b556.workers.dev",
+    "OPENAI_IMAGE_MODEL": "gpt-image-1.5",
+    "LIVE_MAX_SECONDS": "120",
+    "RESULT_RETENTION_DAYS": "7"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "guong-thu-do-beta",
+    "database_id": "18ac60ad-2b73-486f-9eff-44c035d745f7",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{
+    "binding": "IMAGES",
+    "bucket_name": "guong-thu-do-beta-private"
+  }],
+  "queues": {
+    "producers": [{ "binding": "IMAGE_QUEUE", "queue": "guong-thu-do-beta-images" }],
+    "consumers": [{
+      "queue": "guong-thu-do-beta-images",
+      "max_batch_size": 1,
+      "max_batch_timeout": 1,
+      "max_concurrency": 1,
+      "max_retries": 3,
+      "retry_delay": 30,
+      "dead_letter_queue": "guong-thu-do-beta-images-dlq"
+    }]
+  },
+  "triggers": { "crons": ["* * * * *"] },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false }
+  }
+}

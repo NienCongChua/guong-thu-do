@@ -1,0 +1,7 @@
+# Local Worker only; production values are set with wrangler secret put.
+# Never put provider keys in wrangler.jsonc or in the Android application.
+DECART_API_KEY=
+OPENAI_API_KEY=
+FASHN_API_KEY=
+# A random secret at least 32 characters for short-lived provider image links.
+ASSET_SIGNING_KEY=
